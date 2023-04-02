@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  db:
+    container_name: users_db
+    volumes:
+      - users_db_vol:/var/lib/postgresql/data
+    env_file:
+      - .env
+      - .env.prod
+    networks:
+      - users_network
+  
+  web_users:
+    container_name: users_django
+    image: killla/gspot-users:alpha
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+      - "traefik.http.routers.users.entrypoints=websecure"
+      - "traefik.http.routers.users.rule=Host(`users.alpha.g-spot.website`) || (Host(`alpha.g-spot.website`) && PathPrefix(`/api/{v:[0-9]+}/users`))"
+      - "traefik.http.routers.users.tls=true"
+      - "traefik.http.routers.users.tls.certresolver=leresolver"
+      - "traefik.http.routers.users.service=users-service"
+      - "traefik.http.services.users-service.loadbalancer.server.port=8000"
+    env_file:
+      - .env
+      - .env.prod
+    expose:
+      - 8000
+    networks:
+      - users_network
+      - webproxy
+      - common_rabbitmq_net
+      # - databus_rabbitmq_net
+    # command:  >
+    #     sh -c "pip install uwsgi coreapi whitenoise && uwsgi --http :8000 --module config.wsgi:application"
+
+  web_users_admin:
+    image: killla/gspot-users:alpha
+    container_name: users_django_admin
+    command: >
+      sh -c "python manage.py createsuperuser --no-input"
+        depends_on:
+      - db
+    env_file:
+      - .env
+      - .env.user
+    networks:
+      - users_network
+
+  redis:
+    # container_name: common_redis 
+    restart: always
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_SHARED_PASSWORD"
+    image: redis:7.0.5-alpine
+    expose:
+      - 6379
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    networks:
+      - users_network
+      - common_redis_net
+    ports: #для дев
+      - 6379
+
+volumes:
+  users_db_vol:
+
+networks:
+  users_network:
+    name: users_network
+  webproxy:
+    name: webproxy
+    external: true
+  common_rabbitmq_net:
+    name: common_rabbitmq_net
+    external: true
+  common_redis_net:
+    name: common_redis_net

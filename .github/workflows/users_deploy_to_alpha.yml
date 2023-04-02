@@ -1,0 +1,39 @@
+name: Deploy users to alpha server
+on:
+  workflow_run:
+    workflows: 
+      - 'Build and test users'
+    branches:
+      - 'users'
+    types: 
+      - completed
+# on:
+  push:
+    branches: 
+      - 'users'
+    paths:
+      # - 'backend/users/**'
+      - '.cicd/composes/users/**'
+      - '.github/workflows/**'
+jobs:
+  deploy_users:
+    runs-on: alpha-server
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v3
+    - name: Docker pull image
+      run: docker pull killla/gspot-users:alpha
+    - name: Docker-compose up
+      run: |
+        cp backend/users/.env.prod .cicd/composes/users/.env
+        cp backend/users/docker-compose.yml .cicd/composes/users/docker-compose.yml
+        cd .cicd/composes/users/
+        docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+    - name: Send telegram message after deploy
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: |
+          Deploy users to dev server finished
+          See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
