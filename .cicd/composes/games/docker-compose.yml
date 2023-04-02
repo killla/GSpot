@@ -1,0 +1,77 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15
+    container_name: games_db
+    volumes:
+      - games_db_vol:/var/lib/postgresql/data
+    env_file:
+      - .env
+    # ports:
+    #   - "5432:5432"
+    networks:
+      - games_network
+  web:
+    # build: .
+    image: killla/gspot-games:latest
+    container_name: games_django
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+      - "traefik.http.routers.games.entrypoints=websecure"
+      #- "traefik.http.routers.games.rule=Host(`games.${secrets.DOMAIN}`)"
+      - "traefik.http.routers.games.rule=Host(`games.alpha.g-spot.website`) || (Host(`alpha.g-spot.website`) && PathPrefix(`/api/{v:[0-9]+}/games`))"
+      - "traefik.http.routers.games.tls=true"
+      - "traefik.http.routers.games.tls.certresolver=leresolver"
+      - "traefik.http.routers.games.service=games-service"
+      - "traefik.http.services.games-service.loadbalancer.server.port=8000"
+    command: >
+      sh -c "python manage.py migrate
+      && python manage.py runserver 0.0.0.0:8000"
+    # volumes:
+    #   - ./:/games
+    # ports:
+    #   - "8000:8000"
+    expose:
+      - 8000
+    depends_on:
+      - db
+    env_file:
+      - .env
+      - .env.alpha
+    networks:
+      - games_network
+      - webproxy
+
+  web-admin:
+    # build: .
+    image: killla/gspot-games:latest
+    container_name: games_django_admin
+    command: >
+      sh -c "python manage.py createsuperuser --no-input"
+    # volumes:
+    #   - ./:/games
+    # ports:
+    #   - "8000:8000"
+    # expose:
+    #   - 8000
+    depends_on:
+      - db
+    env_file:
+      - .env
+      - .env.user
+    networks:
+      - games_network
+      # - webproxy
+
+volumes:
+  games_db_vol:
+
+networks:
+  games_network:
+    name: games_network
+  webproxy:
+    name: webproxy
+    external: true
+

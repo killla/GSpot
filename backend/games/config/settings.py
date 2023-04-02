@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+CSRF_TRUSTED_ORIGINS = ['https://games.alpha.g-spot.website']
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get(
@@ -137,3 +139,6 @@ REST_FRAMEWORK = {
         'djangorestframework_camel_case.parser.CamelCaseJSONParser',
     ),
 }
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

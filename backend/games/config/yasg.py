@@ -9,6 +9,7 @@ schema_view = get_schema_view(
         default_version='v1',
         description="Test description",
         license=openapi.License(name="BSD License"),
+        # url='https://games.alpha.g-spot.website/api/v1/',
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),

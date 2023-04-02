@@ -1,0 +1,37 @@
+name: Deploy games to alpha server
+on:
+  # workflow_run:
+  #   workflows: 
+  #     - 'Build and test games'
+  #   branches:
+  #     - 'games'
+  #   types: 
+  #     - completed
+
+  push:
+    branches: 
+      - 'games'
+    paths:
+      - 'backend/games/*'
+      - '.cicd/composes/games/*'
+
+  # pull_request:
+  #   branches: [ "main", "games" ]
+jobs:
+  deploy_games:
+    runs-on: alpha-server
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v3
+    - name: Docker pull image
+      run: docker pull killla/gspot-games:latest
+    - name: Docker-compose up
+      run: cp backend/games/.env.dev .cicd/composes/games/.env && cd .cicd/composes/games/ &&  docker-compose up -d
+    - name: Send telegram message after deploy
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: |
+          Deploy games to alpha server finished
+          See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
