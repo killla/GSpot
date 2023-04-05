@@ -1,0 +1,27 @@
+name: Deploy traefik to alpha server
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - 'cicd'
+    paths:
+      - '.cicd/composes/traefik/*'
+      - '.github/workflows/traefik_deploy.yml'
+jobs:
+  deploy_traefik:
+    runs-on: alpha-server
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v3
+    - name: Create folder for traefik
+      run: |
+        mkdir -p $HOME/traefik
+        touch $HOME/traefik/acme.json
+        chmod 600 $HOME/traefik/acme.json
+    - name: Docker-compose up
+      run: |
+        cp .cicd/composes/traefik/docker-compose.yml $HOME/traefik/docker-compose.yml
+        cp .cicd/composes/traefik/traefik.yml $HOME/traefik/traefik.yml
+        cd $HOME/traefik/
+        docker-compose stop
+        docker-compose up -d

@@ -1,0 +1,28 @@
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+certificatesResolvers:
+  leresolver:
+    acme:
+      email: killa.granet@gmail.com
+      storage: acme.json
+      httpChallenge:
+        entryPoint: web
+
+serversTransport:
+  insecureSkipVerify: true
+
+log:
+  level: DEBUG

@@ -1,0 +1,31 @@
+#games
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15 # указать версию
+    container_name: games_db #при поднятии всех сервисов проекта имена должны хорошо различаться
+    volumes:
+      - games_db_vol:/var/lib/postgresql/data
+    env_file:
+      - .env.dev #генерируем перед запуском из секретов и конфигов гитхаб репозитория
+    ports:
+      - "5432:5432" #порт не должен торчать наружу на проде
+  web:
+    # build: .
+    image: killla/gspot-games:latest #тэг в зависимости от окружения
+    container_name: games_django
+    command: > #рефакторить
+      sh -c "python manage.py makemigrations --noinput && 
+      python manage.py migrate
+      && python manage.py runserver 0.0.0.0:8000"
+    # volumes:
+    #   - ./:/games
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env.dev
+volumes:
+  games_db_vol:
