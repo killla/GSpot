@@ -1,0 +1,33 @@
+version: '3'
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.rabbit.rule=Host(`rabbit.channels.alpha.g-spot.website`)"
+      - "traefik.tcp.routers.rabbit.entrypoints=websecure"
+      # - "traefik.tcp.routers.rabbit.tls.certresolver=leresolver"
+      - "traefik.tcp.routers.rabbit.service=rabbit"
+      - "traefik.tcp.services.rabbit.loadbalancer.server.port=5672"
+    expose:
+      - 5672
+      - 15672
+    # ports:
+    #     - 5672:5672
+    #     - 15672:15672
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+        - common_rabbitmq_net
+        - webproxy
+    # env_file:
+    #   - .env.dev
+
+networks:
+  common_rabbitmq_net:
+    name: common_rabbitmq_net
+    driver: bridge
+  webproxy:
+    external: true

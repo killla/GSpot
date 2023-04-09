@@ -1,0 +1,27 @@
+name: Deploy channels to alpha server
+on:
+  push:
+    branches: [ "main", "channels" ]
+  pull_request:
+    branches: [ "main", "channels" ]
+jobs:
+  deploy_channels:
+    runs-on: alpha-server
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v3
+    - name: Docker pull image
+      run: docker pull killla/gspot-channels:latest
+    - name: Docker-compose up
+      run: |
+        cp backend/channels/.env.example .cicd/composes/channels/.env 
+        cd .cicd/composes/channels/
+        docker-compose up -d
+    - name: Send telegram message after deploy
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: |
+          Deploy channels to alpha server finished
+          See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}

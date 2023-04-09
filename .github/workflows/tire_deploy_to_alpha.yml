@@ -1,0 +1,42 @@
+name: Deploy tire to alpha server
+on:
+  push:
+    branches: 
+      - 'channels'
+    paths:
+      - 'backend/tire/*'
+      - '.cicd/composes/tire/*'
+jobs:
+  deploy_tire:
+    runs-on: alpha-server
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v3
+    # - name: Docker pull image
+    #   run: docker pull killla/gspot-channels:latest
+    - name: Create folder for rabbit
+      run: |
+        mkdir -p $HOME/rabbit
+    - name: Prepare env
+      run: |
+        cp .cicd/composes/tire/docker-compose.yml $HOME/rabbit
+        cp backend/databus/init/definitions.json $HOME/rabbit
+        cp backend/databus/init/rabbitmq.conf $HOME/rabbit
+
+        #cp backend/channels/.env.dev-example .cicd/composes/channels/.env 
+        # cd .cicd/composes/channels/
+        
+        
+    - name: Docker-compose up
+      run: |
+        cd $HOME/rabbit
+        docker-compose up -d
+
+    - name: Send telegram message after deploy
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: |
+          Deploy tire to alpha server finished
+          See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}

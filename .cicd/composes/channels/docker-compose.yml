@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+
+  redis:
+    container_name: channels_redis
+    image: redis:7.0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+      - "traefik.tcp.routers.redis.rule=HostSNI(`redis.channels.alpha.g-spot.website`)"
+      - "traefik.tcp.routers.redis.entrypoints=redis"
+      # - "traefik.tcp.routers.redis.tls=true"
+      - "traefik.tcp.routers.redis.tls.certresolver=leresolver"
+      - "traefik.tcp.routers.redis.service=redis"
+      - "traefik.tcp.services.redis.loadbalancer.server.port=6379"
+    expose:
+      - 6379
+    # ports:
+    #   - "6379:6379"
+    networks:
+      - channels_network
+      - webproxy # для тестеров
+
+  mongodb:
+    container_name: channels_db
+    image: mongo:6.0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.mongo.rule=Host(`mongo.channels.alpha.g-spot.website`)"
+      - "traefik.tcp.routers.mongo.entrypoints=websecure"
+      # - "traefik.tcp.routers.mongo.tls.certresolver=leresolver"
+      - "traefik.tcp.routers.mongo.service=mongo"
+      - "traefik.tcp.services.mongo.loadbalancer.server.port=27017"
+    expose:
+      - 27017
+    # ports:
+    #   - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    env_file:
+      - .env
+    networks:
+      # - mongodb_net
+      - rabbitmq_net
+      - channels_network
+      - webproxy # для тестеров
+
+  consumer:
+    container_name: channels_consumer
+    # build: ./broker
+    image: killla/gspot-channels-broker:alpha
+    restart: always
+    env_file:
+      - .env
+    # volumes:
+    #   - ./broker:/app
+    depends_on:
+      - mongodb
+    networks:
+      # - mongodb_net
+      - rabbitmq_net
+      - channels_network
+
+  chat:
+    container_name: channels_chat
+    # build: ./chat
+    image: killla/gspot-channels-chat:alpha
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+      - "traefik.http.routers.channels.entrypoints=websecure"
+      - "traefik.http.routers.channels.rule=Host(`channels.alpha.g-spot.website`) || (Host(`alpha.g-spot.website`) && PathPrefix(`/api/{v:[0-9]+}/channels`))"
+      - "traefik.http.routers.channels.tls=true"
+      - "traefik.http.routers.channels.tls.certresolver=leresolver"
+      - "traefik.http.routers.channels.service=channels-service"
+      - "traefik.http.services.channels-service.loadbalancer.server.port=8000"
+    restart: always
+    env_file:
+      - .env
+    # volumes:
+    #   - ./chat:/chat/
+    expose:
+      - 8000
+    # ports:
+    #   - "8000:8000"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - webproxy
+      # - rabbitmq_net
+      - channels_network
+
+networks:
+  channels_network:
+  mongodb_net:
+  rabbitmq_net:
+    external: true
+  webproxy:
+    external: true
+
+volumes:
+  mongodb_data:
