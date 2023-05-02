@@ -1,6 +1,6 @@
-api:
-  dashboard: true
-  insecure: true
+# api:
+#   dashboard: true
+#   insecure: true
 
 entryPoints:
   web:
@@ -25,4 +25,4 @@ serversTransport:
   insecureSkipVerify: true
 
 log:
-  level: DEBUG
+  level: ERROR
