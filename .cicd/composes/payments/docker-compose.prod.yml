@@ -1,0 +1,67 @@
+version: '3.7'
+
+services:
+  payments:
+    container_name: payments_django
+    image: killla/gspot-payments:alpha
+    labels:
+      # наружу только для dev
+      - "traefik.enable=true"
+      - "traefik.docker.network=webproxy"
+      - "traefik.http.routers.payments.entrypoints=websecure"
+      - "traefik.http.routers.payments.rule=Host(`payments.alpha.g-spot.website`) || (Host(`alpha.g-spot.website`) && PathPrefix(`/api/{v:[0-9]+}/payments`))"
+      - "traefik.http.routers.payments.tls=true"
+      - "traefik.http.routers.payments.tls.certresolver=leresolver"
+      - "traefik.http.routers.payments.service=payments-service"
+      - "traefik.http.services.payments-service.loadbalancer.server.port=8000"
+    restart: always
+    env_file:
+      - .env
+      - .env.prod
+    networks:
+      - payments_network
+      - webproxy #только для dev
+
+  payments_db:
+    container_name: payments_db
+    volumes:
+      - payments_db_vol:/var/lib/postgresql/data
+    env_file:
+      - .env
+    networks:
+      - payments_network
+
+  redis:
+    container_name: payments_redis
+    # restart: unless-stopped
+    networks:
+      - payments_network
+
+  worker:
+    container_name: payments_worker
+    image: killla/gspot-payments:alpha
+    env_file:
+      - .env
+      - .env.prod
+    networks:
+      - payments_network
+
+  beat:
+    container_name: payments_beat
+    image: killla/gspot-payments:alpha
+    env_file:
+      - .env
+      - .env.prod
+    networks:
+      - payments_network
+
+volumes:
+  payments_db_vol:
+    name: payments_db_vol
+
+networks:
+  payments_network:
+    name: payments_network
+  webproxy:
+    external: true
+
