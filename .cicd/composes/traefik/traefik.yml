@@ -9,6 +9,10 @@ entryPoints:
     address: ":443"
   redis:
     address: ":6379"
+  mongo:
+    address: ":27017"
+  rabbit:
+    address: ":5672"
 
 providers:
   docker:
